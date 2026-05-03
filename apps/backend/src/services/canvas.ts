@@ -6,6 +6,100 @@ import { CanvasCourse, CanvasAssignment, CanvasAnnouncement } from '@cypilot/sha
 class CanvasService {
   private baseUrl = config.canvas.baseUrl;
   private apiKey = config.canvas.apiKey;
+  private isDevUser(user: User): boolean {
+    return user.id.startsWith('dev-');
+  }
+
+  private getMockCourses(): CanvasCourse[] {
+    return [
+      {
+        id: 1001,
+        name: 'COM S 309 - Software Development Practices',
+        courseCode: 'COM S 309',
+        term: 'Spring 2026',
+        enrollmentTermId: 20261,
+        workflowState: 'available',
+        totalStudents: 120,
+        courseFormat: 'on_campus'
+      },
+      {
+        id: 1002,
+        name: 'SE 319 - Construction of User Interfaces',
+        courseCode: 'SE 319',
+        term: 'Spring 2026',
+        enrollmentTermId: 20261,
+        workflowState: 'available',
+        totalStudents: 90,
+        courseFormat: 'on_campus'
+      }
+    ];
+  }
+
+  private getMockAssignments(): CanvasAssignment[] {
+    const dueSoon = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
+    const dueLater = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString();
+    return [
+      {
+        id: 2001,
+        name: 'Sprint 2 Demo',
+        description: 'Prepare demo slides and record a short walkthrough.',
+        dueAt: dueSoon,
+        pointsPossible: 100,
+        gradingType: 'points',
+        submissionTypes: ['online_upload'],
+        hasSubmittedSubmissions: false,
+        dueDateString: new Date(dueSoon).toLocaleDateString(),
+        courseId: 1001,
+        htmlUrl: 'https://canvas.iastate.edu',
+        assignmentGroupId: 1,
+        position: 1,
+        published: true
+      },
+      {
+        id: 2002,
+        name: 'UI Prototype Review',
+        description: 'Submit wireframes and navigation flow.',
+        dueAt: dueLater,
+        pointsPossible: 50,
+        gradingType: 'points',
+        submissionTypes: ['online_text_entry'],
+        hasSubmittedSubmissions: false,
+        dueDateString: new Date(dueLater).toLocaleDateString(),
+        courseId: 1002,
+        htmlUrl: 'https://canvas.iastate.edu',
+        assignmentGroupId: 1,
+        position: 2,
+        published: true
+      }
+    ];
+  }
+
+  private getMockAnnouncements(): CanvasAnnouncement[] {
+    return [
+      {
+        id: 3001,
+        title: 'Exam Review Session',
+        message: 'Exam review is scheduled for Friday at 4 PM in Coover 1010.',
+        postedAt: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
+        author: {
+          id: 42,
+          displayName: 'Professor Example'
+        },
+        htmlUrl: 'https://canvas.iastate.edu'
+      },
+      {
+        id: 3002,
+        title: 'Project Milestone Reminder',
+        message: 'Please complete milestone check-in by Sunday night.',
+        postedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+        author: {
+          id: 43,
+          displayName: 'Course Staff'
+        },
+        htmlUrl: 'https://canvas.iastate.edu'
+      }
+    ];
+  }
 
   async getDashboardData(user: User, accessToken: string) {
     const [courses, upcomingAssignments, recentAnnouncements] = await Promise.allSettled([
@@ -24,6 +118,10 @@ class CanvasService {
   }
 
   async getCourses(user: User): Promise<CanvasCourse[]> {
+    if (this.isDevUser(user) || !this.apiKey) {
+      return this.getMockCourses();
+    }
+
     try {
       const response = await axios.get(`${this.baseUrl}/api/v1/courses`, {
         headers: {
@@ -56,6 +154,10 @@ class CanvasService {
   }
 
   async getAssignments(courseId: number, user: User): Promise<CanvasAssignment[]> {
+    if (this.isDevUser(user) || !this.apiKey) {
+      return this.getMockAssignments().filter((assignment) => assignment.courseId === courseId);
+    }
+
     try {
       const response = await axios.get(`${this.baseUrl}/api/v1/courses/${courseId}/assignments`, {
         headers: {
@@ -138,6 +240,10 @@ class CanvasService {
   }
 
   async getAnnouncements(courseId: number, user: User): Promise<CanvasAnnouncement[]> {
+    if (this.isDevUser(user) || !this.apiKey) {
+      return this.getMockAnnouncements();
+    }
+
     try {
       const response = await axios.get(`${this.baseUrl}/api/v1/announcements`, {
         headers: {

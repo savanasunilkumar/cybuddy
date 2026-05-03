@@ -1,9 +1,10 @@
 {
   "extends": "@cypilot/tsconfig/react-native.json",
+  "compilerOptions": {
+    "rootDir": "."
+  },
   "include": [
     "**/*.ts",
-    "**/*.tsx",
-    ".expo/types/**/*.ts",
-    "expo-env.d.ts"
+    "**/*.tsx"
   ]
 }

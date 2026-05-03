@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Cypilot",
+    "name": "Cybuddy",
     "slug": "cypilot",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -18,10 +18,15 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.cypilot.app",
       "infoPlist": {
+        "NSCameraUsageDescription": "Cybuddy uses the camera so Cy can describe what is in front of you out loud.",
+        "NSMicrophoneUsageDescription": "Cybuddy uses the microphone so you can talk to Cy hands-free.",
+        "NSPhotoLibraryUsageDescription": "Cybuddy uses your photos when you ask Cy to describe an existing image.",
         "CFBundleURLTypes": [
           {
             "CFBundleURLName": "cypilot",
-            "CFBundleURLSchemes": ["cypilot"]
+            "CFBundleURLSchemes": [
+              "cypilot"
+            ]
           }
         ]
       }
@@ -54,6 +59,12 @@
     "plugins": [
       "expo-router",
       [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow Cybuddy to use your location to set your trip starting point."
+        }
+      ],
+      [
         "expo-build-properties",
         {
           "ios": {
@@ -63,15 +74,27 @@
             "newArchEnabled": false
           }
         }
+      ],
+      "expo-audio",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Cybuddy uses the camera so Cy can describe what is in front of you out loud."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Cybuddy uses the camera so Cy can describe what is in front of you out loud.",
+          "microphonePermission": "Cybuddy uses the microphone so you can talk to Cy hands-free.",
+          "recordAudioAndroid": false
+        }
       ]
     ],
     "scheme": "cypilot",
     "extra": {
       "router": {
         "origin": false
-      },
-      "eas": {
-        "projectId": "your-project-id-here"
       }
     }
   }

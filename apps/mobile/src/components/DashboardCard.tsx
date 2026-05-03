@@ -1,20 +1,18 @@
 import React from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
+  View, Text, Pressable, StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { palette, radii, shadows, spacing } from '../theme/tokens';
 
 interface DashboardCardProps {
   title: string;
   icon: keyof typeof Ionicons.glyphMap;
-  color: string;
+  accentColor: string;
   data: {
     primary: string;
     secondary: string;
-    courses?: number;
+    tertiary?: string;
   };
   onPress: () => void;
 }
@@ -22,72 +20,86 @@ interface DashboardCardProps {
 export const DashboardCard: React.FC<DashboardCardProps> = ({
   title,
   icon,
-  color,
+  accentColor,
   data,
   onPress,
 }) => {
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress}>
+    <Pressable
+      style={({ pressed }) => [
+        styles.card,
+        { borderColor: accentColor },
+        pressed && styles.cardPressed
+      ]}
+      onPress={onPress}
+    >
       <View style={styles.header}>
-        <View style={[styles.iconContainer, { backgroundColor: color }]}>
-          <Ionicons name={icon} size={24} color="#fff" />
+        <View style={[styles.iconContainer, { backgroundColor: `${accentColor}1A` }]}>
+          <Ionicons name={icon} size={20} color={accentColor} />
         </View>
-        <Text style={styles.title}>{title}</Text>
-        <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
+        <Text style={styles.title} numberOfLines={1}>{title}</Text>
+        <Ionicons name="chevron-forward-outline" size={18} color={palette.textMuted} />
       </View>
       
       <View style={styles.content}>
         <Text style={styles.primaryText}>{data.primary}</Text>
         <Text style={styles.secondaryText}>{data.secondary}</Text>
+        {data.tertiary ? <Text style={styles.tertiaryText}>{data.tertiary}</Text> : null}
       </View>
-    </TouchableOpacity>
+    </Pressable>
   );
 };
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    backgroundColor: palette.surface,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+    ...shadows.card,
+  },
+  cardPressed: {
+    opacity: 0.92,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: spacing.sm,
+    gap: spacing.sm,
   },
   iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: radii.md,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
   },
   title: {
     flex: 1,
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: 16,
+    fontWeight: '700',
+    color: palette.textPrimary,
+    letterSpacing: 0.1,
   },
   content: {
-    paddingLeft: 52,
+    paddingLeft: 46,
   },
   primaryText: {
-    fontSize: 16,
-    color: '#333',
+    fontSize: 15,
+    color: palette.textPrimary,
+    fontWeight: '600',
     marginBottom: 4,
   },
   secondaryText: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 13,
+    color: palette.textSecondary,
+  },
+  tertiaryText: {
+    marginTop: 4,
+    fontSize: 12,
+    color: palette.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
 });

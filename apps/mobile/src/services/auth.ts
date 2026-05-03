@@ -1,10 +1,32 @@
 import axios from 'axios';
-import { API_BASE_URL, LoginResponse, User, AuthTokens } from '@cypilot/shared';
+import { LoginResponse, User, AuthTokens } from '@cypilot/shared';
+import { getApiBaseUrl } from '../config/api';
 
 class AuthService {
-  private baseUrl = API_BASE_URL;
+  private baseUrl = getApiBaseUrl();
 
-  async exchangeCodeForTokens(authorizationCode: string): Promise<{ success: boolean; data?: LoginResponse }> {
+  async getLoginUrl(state: string = 'default'): Promise<{ success: boolean; data?: { authUrl: string }; error?: string }> {
+    try {
+      const response = await axios.get(`${this.baseUrl}/auth/login`, {
+        params: { state }
+      });
+
+      return {
+        success: response.data.success,
+        data: response.data.data
+      };
+    } catch (error) {
+      console.error('Error getting login URL:', error);
+      const message = axios.isAxiosError(error)
+        ? ((error.response?.data as any)?.error?.message || error.message)
+        : error instanceof Error
+          ? error.message
+          : 'Unknown login URL error';
+      return { success: false, error: message };
+    }
+  }
+
+  async exchangeCodeForTokens(authorizationCode: string): Promise<{ success: boolean; data?: LoginResponse; error?: string }> {
     try {
       const response = await axios.post(`${this.baseUrl}/auth/callback`, {
         code: authorizationCode,
@@ -17,7 +39,34 @@ class AuthService {
       };
     } catch (error) {
       console.error('Error exchanging code for tokens:', error);
-      return { success: false };
+      const message = axios.isAxiosError(error)
+        ? ((error.response?.data as any)?.error?.message || error.message)
+        : error instanceof Error
+          ? error.message
+          : 'Unknown callback error';
+      return { success: false, error: message };
+    }
+  }
+
+  async devLogin(name: string = 'Dev User', email: string = 'dev.user@iastate.edu'): Promise<{ success: boolean; data?: LoginResponse; error?: string }> {
+    try {
+      const response = await axios.post(`${this.baseUrl}/auth/dev-login`, {
+        name,
+        email
+      });
+
+      return {
+        success: response.data.success,
+        data: response.data.data
+      };
+    } catch (error) {
+      console.error('Error in dev login:', error);
+      const message = axios.isAxiosError(error)
+        ? ((error.response?.data as any)?.error?.message || error.message)
+        : error instanceof Error
+          ? error.message
+          : 'Unknown dev login error';
+      return { success: false, error: message };
     }
   }
 

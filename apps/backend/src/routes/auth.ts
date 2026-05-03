@@ -6,7 +6,34 @@ import { User } from '@cypilot/shared';
 
 const router = express.Router();
 
-// Initialize MSAL
+const requiredMicrosoftEnv = [
+  ['MICROSOFT_CLIENT_ID', config.microsoft.clientId],
+  ['MICROSOFT_CLIENT_SECRET', config.microsoft.clientSecret],
+  ['MICROSOFT_TENANT_ID', config.microsoft.tenantId],
+  ['MICROSOFT_REDIRECT_URI', config.microsoft.redirectUri]
+] as const;
+
+const missingMicrosoftEnv = requiredMicrosoftEnv
+  .filter(([, value]) => !value)
+  .map(([name]) => name);
+
+const isMicrosoftAuthConfigured = missingMicrosoftEnv.length === 0;
+const isDevAuthBypassEnabled =
+  config.server.nodeEnv !== 'production' &&
+  process.env.ENABLE_DEV_AUTH_BYPASS !== 'false';
+
+const sendMicrosoftAuthConfigError = (res: express.Response): void => {
+  res.status(503).json({
+    success: false,
+    error: {
+      code: 'MICROSOFT_AUTH_NOT_CONFIGURED',
+      message: `Missing required environment variables: ${missingMicrosoftEnv.join(', ')}`
+    },
+    timestamp: new Date().toISOString()
+  });
+};
+
+// Initialize MSAL only when all required env vars are present.
 const msalConfig = {
   auth: {
     clientId: config.microsoft.clientId,
@@ -26,10 +53,17 @@ const msalConfig = {
   }
 };
 
-const cca = new ConfidentialClientApplication(msalConfig);
+const cca = isMicrosoftAuthConfigured
+  ? new ConfidentialClientApplication(msalConfig)
+  : null;
 
 // Login endpoint - redirect to Microsoft OAuth
 router.get('/login', async (req, res) => {
+  if (!cca) {
+    sendMicrosoftAuthConfigError(res);
+    return;
+  }
+
   try {
     const authCodeUrlParameters = {
       scopes: ['openid', 'profile', 'email', 'User.Read', 'Mail.Read', 'Calendars.Read'],
@@ -55,10 +89,57 @@ router.get('/login', async (req, res) => {
   }
 });
 
+// Development-only login bypass
+router.post('/dev-login', (req, res) => {
+  if (!isDevAuthBypassEnabled) {
+    res.status(403).json({
+      success: false,
+      error: {
+        code: 'DEV_AUTH_DISABLED',
+        message: 'Development authentication bypass is disabled'
+      },
+      timestamp: new Date().toISOString()
+    });
+    return;
+  }
+
+  const email = (typeof req.body?.email === 'string' && req.body.email) || 'dev.user@iastate.edu';
+  const name = (typeof req.body?.name === 'string' && req.body.name) || 'Dev User';
+  const universityId = email.includes('@') ? email.split('@')[0] : 'devuser';
+
+  const user: User = {
+    id: `dev-${Date.now()}`,
+    email,
+    name,
+    universityId,
+    profilePicture: undefined
+  };
+
+  const jwtToken = generateToken(user, 'dev-access-token');
+
+  res.json({
+    success: true,
+    data: {
+      user,
+      tokens: {
+        accessToken: jwtToken,
+        refreshToken: 'dev-refresh-token',
+        expiresAt: Date.now() + (24 * 60 * 60 * 1000)
+      }
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Callback endpoint - handle OAuth callback
 router.post('/callback', async (req, res) => {
+  if (!cca) {
+    sendMicrosoftAuthConfigError(res);
+    return;
+  }
+
   try {
-    const { code, state } = req.body;
+    const { code } = req.body;
 
     if (!code) {
       res.status(400).json({

@@ -12,6 +12,7 @@ import { outlookRouter } from './routes/outlook';
 import { workdayRouter } from './routes/workday';
 import { cyrideRouter } from './routes/cyride';
 import { dashboardRouter } from './routes/dashboard';
+import { voiceRouter } from './routes/voice';
 
 const app = express();
 
@@ -57,6 +58,7 @@ app.use('/api/outlook', outlookRouter);
 app.use('/api/workday', workdayRouter);
 app.use('/api/cyride', cyrideRouter);
 app.use('/api/dashboard', dashboardRouter);
+app.use('/api/voice', voiceRouter);
 
 // 404 handler
 app.use('*', (req, res) => {

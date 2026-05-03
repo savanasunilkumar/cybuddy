@@ -31,6 +31,11 @@ export const config = {
     baseUrl: process.env.CYRIDE_BASE_URL || 'https://api.cyride.com',
     apiKey: process.env.CYRIDE_API_KEY || ''
   },
+  ai: {
+    proxyUrl: process.env.AI_PROXY_URL || '',
+    proxyToken: process.env.AI_PROXY_TOKEN || '',
+    model: process.env.AI_MODEL || '@cf/moonshotai/kimi-k2.6'
+  },
   redis: {
     url: process.env.REDIS_URL || 'redis://localhost:6379',
     password: process.env.REDIS_PASSWORD || undefined
