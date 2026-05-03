@@ -1,206 +1,148 @@
-# Cypilot - AI University Copilot
+# Cybuddy — Your Campus Buddy, For Every Student
 
-Cypilot is an AI-powered university copilot application designed specifically for Iowa State University students. It aggregates data from Canvas, Outlook, Workday, and CyRide services to provide a unified dashboard experience.
+**Voice-first, screen-reader-native, accessibility-built campus companion for Iowa State University.** One voice asks the question, and Canvas, Outlook, CyRide, and Workday answer.
 
-## Features
+Built so no student gets left behind navigating ISU — including blind, low-vision, dyslexic, ADHD, and chronic-illness students who deserve the same effortless campus experience as everyone else.
 
-- **Canvas Integration**: View courses, assignments, grades, and announcements
-- **Outlook Integration**: Access important emails and calendar events
-- **Workday Integration**: Check notifications, tuition fees, and student records
-- **CyRide Integration**: View bus routes, stops, and real-time trip information
-- **Microsoft Authentication**: Secure login using Iowa State University credentials
-- **Real-time Updates**: Automatic data refresh and notifications
+## What Cybuddy does
+
+- **Just ask Cy.** Tap the floating mic on any tab. Cy answers questions grounded in your live data — *"What's due this week?"*, *"Anything important in my inbox?"*, *"What CyRide buses are running right now?"*, *"What do I need to do in Workday?"* The backend pulls live context from all four services in parallel before every reply, so Cy never makes things up.
+- **Vision tab.** Live camera preview with auto-describe. Point your phone at anything — a CyRide bus pulling up, a syllabus page, a building entrance — and Cy describes it out loud every few seconds. Or tap **Describe once** for a single look. Built for blind and low-vision students.
+- **Plain-English mode.** Ask Cy to rewrite a confusing email or syllabus in clear, scannable language. Built for dyslexia, ADHD, and ESL students.
+- **Screen-reader native.** Every screen, every button, every state has `accessibilityLabel` + `accessibilityHint`. The Vision description panel uses an `accessibilityLiveRegion` so VoiceOver announces new descriptions automatically.
+- **Consolidated dashboard.** Canvas assignments, Outlook calendar + email, CyRide live routes, Workday notifications + holds — all in one place. Reduces app-switching cognitive load.
 
 ## Architecture
 
-This is a monorepo built with Turborepo containing:
+A Turborepo monorepo:
 
-- **Backend** (`apps/backend`): Node.js/Express API server with TypeScript
-- **Mobile** (`apps/mobile`): React Native app with Expo
-- **Shared** (`packages/shared`): Common TypeScript types and utilities
-- **MCP Client** (`packages/mcp-client`): Model Context Protocol client library
+- **`apps/backend`** — Node.js + Express API. JWT auth, OAuth wrappers for Microsoft Graph (Outlook), Canvas LMS, Workday, plus a live CyRide feed. Voice and vision routes call Cloudflare Workers AI through a personal proxy worker.
+- **`apps/mobile`** — React Native + Expo (SDK 54). TypeScript. Voice assistant, Vision tab with live camera, full accessibility props on every interactive element.
+- **`packages/shared`** — Common TypeScript types, OAuth config constants.
 
-## Tech Stack
+## Tech stack
 
-### Backend
-- Node.js with Express
-- TypeScript
-- Microsoft OAuth (MSAL)
-- MCP (Model Context Protocol) servers
-- Redis for caching (optional)
+| Layer | What |
+|---|---|
+| Voice reasoning | **Moonshot Kimi K2.6** on Cloudflare Workers AI (1T params, 262k context, multimodal, reasoning) |
+| Vision | Same Kimi K2.6 with `image_url` content blocks |
+| Speech-to-text | **Whisper Large v3 Turbo** on Groq (~164× realtime) |
+| Text-to-speech | **`@cf/myshell-ai/melotts`** on Cloudflare Workers AI (free tier) |
+| Mobile | React Native, Expo SDK 54, expo-camera, expo-image-manipulator, expo-av, expo-secure-store |
+| Backend | Node.js, Express, TypeScript, JWT auth, axios |
+| Monorepo | Turborepo, pnpm workspaces |
 
-### Mobile
-- React Native with Expo
-- TypeScript
-- React Navigation
-- React Query for data fetching
-- Zustand for state management
-
-### Development
-- Turborepo for monorepo management
-- pnpm for package management
-- ESLint and Prettier for code quality
-- TypeScript for type safety
-
-## Getting Started
+## Getting started
 
 ### Prerequisites
 
 - Node.js 18+ and pnpm
-- iOS Simulator (for iOS development) or Android Studio (for Android development)
-- Iowa State University Microsoft account
-- API keys for Canvas, Workday, and CyRide services
+- Expo Go on your iPhone or Android (or a custom dev client for wake-word features)
+- A Cloudflare Workers AI proxy worker (the [`originx-ai-proxy`](apps/backend/src/services/cloudflareAI.ts) shape — accepts `POST /v1/ai/run/<model>` with bearer auth)
+- Optional: Microsoft tenant for real OAuth (dev-bypass mode works without it)
 
-### Installation
+### Install
 
-1. Clone the repository:
 ```bash
-git clone <repository-url>
-cd cypilot
-```
-
-2. Install dependencies:
-```bash
+git clone https://github.com/savanasunilkumar/cybuddy.git
+cd cybuddy
 pnpm install
 ```
 
-3. Set up environment variables:
-```bash
-# Copy example environment file
-cp apps/backend/.env.example apps/backend/.env
+### Configure environment
 
-# Edit the environment file with your configuration
+Backend (`apps/backend/.env`):
+
+```bash
+NODE_ENV=development
+PORT=3001
+JWT_SECRET=fallback-secret-change-in-production
+ENABLE_DEV_AUTH_BYPASS=true
+
+# Cloudflare AI proxy (required for voice + vision)
+AI_PROXY_URL=https://your-proxy-worker.workers.dev
+AI_PROXY_TOKEN=your-shared-bearer-token
+AI_MODEL=@cf/moonshotai/kimi-k2.6
+
+# Optional — real OAuth instead of dev bypass
+MICROSOFT_CLIENT_ID=
+MICROSOFT_CLIENT_SECRET=
+MICROSOFT_TENANT_ID=
+CANVAS_BASE_URL=https://canvas.iastate.edu
+CANVAS_API_KEY=
 ```
 
-4. Configure Microsoft Authentication:
-   - Register an app in Azure AD (Iowa State's tenant)
-   - Update `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET`, and `MICROSOFT_TENANT_ID` in the backend `.env` file
+Mobile (`apps/mobile/.env`):
 
-5. Configure API keys:
-   - Add Canvas API key
-   - Add Workday credentials
-   - Add CyRide API key (if available)
-
-### Development
-
-1. Start the backend server:
 ```bash
+EXPO_PUBLIC_GROQ_API_KEY=your-groq-key  # for Whisper STT
+EXPO_PUBLIC_ELEVENLABS_API_KEY=         # optional, only if switching from melotts
+```
+
+### Run
+
+```bash
+# Terminal 1 — backend
 pnpm --filter @cypilot/backend dev
-```
 
-2. Start the mobile app:
-```bash
+# Terminal 2 — mobile (Metro bundler)
 pnpm --filter @cypilot/mobile start
 ```
 
-3. Run on iOS:
-```bash
-pnpm --filter @cypilot/mobile ios
+Then open Expo Go on your phone and scan the QR. Phone + Mac must be on the same WiFi.
+
+## API endpoints
+
+### Voice + Vision (the new stuff)
+- `POST /api/voice/chat` — text in, Cy reply out. Pulls live context from Outlook + Canvas + CyRide + Workday before calling Kimi K2.6.
+- `POST /api/voice/tts` — text in, base64 WAV out. Routed through the AI proxy worker.
+- `POST /api/voice/describe` — base64 image in, scene description out. Kimi K2.6 vision.
+
+### Auth
+- `POST /auth/login` — Microsoft OAuth login URL
+- `POST /auth/callback` — OAuth code exchange
+- `POST /auth/dev-login` — dev-bypass login (no Microsoft needed)
+- `POST /auth/refresh` — refresh tokens
+
+### Data
+- `GET /api/canvas/courses`, `/api/canvas/assignments/upcoming`, `/api/canvas/announcements/recent`
+- `GET /api/outlook/emails/important`, `/api/outlook/events/upcoming`
+- `GET /api/workday/notifications`, `/api/workday/action-items`, `/api/workday/tuition-fees`, `/api/workday/student-record`
+- `GET /api/cyride/routes/active`, `/api/cyride/routes/from-to`, `/api/cyride/stops/nearby`
+- `GET /api/dashboard` — aggregated rollup
+
+## Project structure
+
 ```
-
-4. Run on Android:
-```bash
-pnpm --filter @cypilot/mobile android
-```
-
-### Building
-
-Build all packages:
-```bash
-pnpm build
-```
-
-Build specific packages:
-```bash
-pnpm --filter @cypilot/backend build
-pnpm --filter @cypilot/mobile build
-```
-
-## Project Structure
-
-```
-cypilot/
+cybuddy/
 ├── apps/
-│   ├── backend/           # Express API server
-│   │   ├── src/
-│   │   │   ├── config/    # Configuration
-│   │   │   ├── middleware/ # Express middleware
-│   │   │   ├── routes/    # API routes
-│   │   │   └── services/  # Business logic
-│   │   └── package.json
-│   └── mobile/           # React Native app
-│       ├── src/
-│       │   ├── components/ # Reusable components
-│       │   ├── contexts/  # React contexts
-│       │   ├── navigation/ # Navigation setup
-│       │   ├── screens/   # App screens
-│       │   └── services/  # API clients
-│       └── package.json
+│   ├── backend/              # Express API
+│   │   └── src/
+│   │       ├── routes/       # auth, canvas, outlook, workday, cyride, voice, dashboard
+│   │       └── services/     # cloudflareAI (Kimi K2.6 + melotts), per-source services
+│   └── mobile/               # React Native + Expo
+│       └── src/
+│           ├── screens/      # Dashboard, Outlook, Academics, CyRide, Vision, VoiceAssistant, Login
+│           ├── services/     # api, auth, groq (STT), cloudflareTTS, cameraDescribe
+│           ├── hooks/        # useVoiceAI
+│           └── contexts/     # AuthContext, VoiceContext
 ├── packages/
-│   ├── shared/           # Shared types and utilities
-│   ├── mcp-client/       # MCP protocol client
-│   └── tsconfig/         # TypeScript configurations
-├── package.json          # Root package.json
-├── turbo.json           # Turborepo configuration
-└── pnpm-workspace.yaml  # Workspace configuration
+│   └── shared/               # Cross-cutting TS types + constants
+├── package.json
+├── turbo.json
+└── pnpm-workspace.yaml
 ```
 
-## API Endpoints
+## Inspiration
 
-### Authentication
-- `POST /auth/login` - Initiate Microsoft OAuth login
-- `POST /auth/callback` - Handle OAuth callback
-- `POST /auth/refresh` - Refresh access tokens
-- `GET /auth/me` - Get current user information
+In 2007, a 16-year-old in Andhra Pradesh, India was barred by India's CBSE from studying science because he was blind. He fought the board, won, topped his class — then every major Indian engineering institute including IIT and BITS rejected his application for the same reason.
 
-### Canvas
-- `GET /api/canvas/courses` - Get enrolled courses
-- `GET /api/canvas/courses/:id/assignments` - Get course assignments
-- `GET /api/canvas/assignments/upcoming` - Get upcoming assignments
-- `GET /api/canvas/announcements/recent` - Get recent announcements
+His name is **Srikanth Bolla**. He went on to become the first international blind student at MIT Sloan, founded Bollant Industries (backed by Ratan Tata), and was mentored by Dr. APJ Abdul Kalam.
 
-### Outlook
-- `GET /api/outlook/emails/important` - Get important emails
-- `GET /api/outlook/events/upcoming` - Get upcoming calendar events
-- `PATCH /api/outlook/emails/:id/read` - Mark email as read
+> *"If IIT didn't want me, I didn't want IIT either."* — Srikanth Bolla
 
-### Workday
-- `GET /api/workday/notifications` - Get notifications
-- `GET /api/workday/action-items` - Get action items
-- `GET /api/workday/tuition-fees` - Get tuition fees
-- `GET /api/workday/student-record` - Get student record
-
-### CyRide
-- `GET /api/cyride/routes` - Get available routes
-- `GET /api/cyride/stops/nearby` - Get nearby stops
-- `GET /api/cyride/trips/upcoming` - Get upcoming trips
-- `POST /api/cyride/route-plan` - Plan a route
-
-### Dashboard
-- `GET /api/dashboard` - Get aggregated dashboard data
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit your changes: `git commit -m 'Add amazing feature'`
-4. Push to the branch: `git push origin feature/amazing-feature`
-5. Open a Pull Request
+Most students like Srikanth don't make it to MIT. The barriers aren't just at elite institutions — they're in the small daily friction of campus life. Cybuddy is built for the next Srikanth, while they're still in undergrad.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Support
-
-For support and questions, please contact the development team or create an issue in the repository.
-
-## Roadmap
-
-- [ ] Push notifications for important updates
-- [ ] Offline mode support
-- [ ] Advanced filtering and search
-- [ ] Integration with additional university services
-- [ ] AI-powered insights and recommendations
-- [ ] Desktop application
-- [ ] Web application
+MIT.
